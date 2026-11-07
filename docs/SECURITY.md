@@ -1,19 +1,13 @@
-# Security notes
+# Security
 
-## Threat model
+`timeseries_resample` processes time series datasets, which may contain adversarial input.
 
-`trysac-timeseries-resample` is a pure library without I/O. The main risks are:
+## Threat Model
 
-- **Supply chain**: a compromised dependency or CI action. Mitigation: no runtime dependencies,
-  Dependabot weekly updates, actions pinned to major versions, minimal workflow permissions.
-- **Leaked secrets**: tokens committed by mistake. Mitigation: `gitleaks` runs in the local gates
-  and in CI; `.env` files are git-ignored.
-- **Untrusted input**: callers may pass hostile strings. Mitigation: validate input and fail with
-  explicit exceptions; never `eval`, `exec` or deserialize untrusted data.
+### Defended
+- **Denial of Service (DoS)**: Memory exhaustion is mitigated by explicit constraints on input size (`max_points` default 1,000,000) and output size (`max_buckets` default 1,000,000). These limits are enforced before heavy computation occurs.
+- **Invalid Input**: The library rejects `bool` types, `NaN` or `infinity` floating-point values, and naive datetimes, preventing corrupted state or crashes.
+- **Error Information Leakage**: Exception messages are explicitly truncated to 200 characters and do not echo raw, potentially secret-laden user inputs.
 
-## Publishing
-
-Releases are published to PyPI with trusted publishing (OIDC) when available, never with a
-long-lived token stored in the repository.
-
-To report a vulnerability, see [SECURITY.md](../SECURITY.md).
+### Not Defended
+- **Resource Exhaustion (Computation)**: While memory usage is limited by bucket counts, highly dense, valid input datasets may still require non-trivial CPU time for sorting and aggregation.

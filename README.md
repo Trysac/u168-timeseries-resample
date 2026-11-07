@@ -1,48 +1,34 @@
 # timeseries-resample
 
-[![PyPI version](https://img.shields.io/pypi/v/trysac-timeseries-resample)](https://pypi.org/project/trysac-timeseries-resample/)
-[![License: MIT](https://img.shields.io/pypi/l/trysac-timeseries-resample)](LICENSE)
-[![CI](https://github.com/Trysac/u168-timeseries-resample/actions/workflows/ci.yml/badge.svg)](https://github.com/Trysac/u168-timeseries-resample/actions/workflows/ci.yml)
-
-Resample irregular time series into fixed UTC buckets with seven aggregations and fill gaps by forward, backward, linear time-weighted or zero fill with limits
+Resample irregular time series into fixed UTC buckets with seven aggregations and fill gaps by forward, backward, linear time-weighted or zero fill with limits.
 
 ## Problem
+Sensor readings, metrics, and price data often arrive at irregular intervals. To compute rates or aggregate data, this input must be aligned to a fixed time grid. While heavy libraries like `pandas` solve this, they introduce significant dependencies that are often excessive for lightweight services or CLIs. Naive implementations frequently fail on edge cases involving UTC alignment, empty bucket handling, and floating-point summation errors.
 
-Describe in two or three sentences the concrete problem this utility solves, who hits it, and what
-they do today without it. Replace this paragraph when the first real feature lands.
+## Installation
 
-## Install
-
-```sh
-pip install trysac-timeseries-resample
-# or
-uv add trysac-timeseries-resample
+```bash
+pip install timeseries-resample
 ```
-
-Requires Python 3.10 or newer. No runtime dependencies.
 
 ## Usage
 
 ```python
-import timeseries_resample
+from datetime import datetime, timedelta, timezone
+from timeseries_resample import resample, fill
 
-# normalize() trims surrounding whitespace and lower-cases the text.
-print(timeseries_resample.normalize("  Hello World "))  # -> "hello world"
-
-# Blank input is rejected explicitly instead of returning an empty string.
-try:
-    timeseries_resample.normalize("   ")
-except ValueError as exc:
-    print(f"rejected: {exc}")
+points = [(datetime(2026, 11, 6, 0, 0, 10, tzinfo=timezone.utc), 1.0)]
+grid = resample(points, every=timedelta(minutes=1), agg="mean")
+result = fill(grid, "zero")
 ```
 
-## Documentation
+## Public API Summary
 
-- [Architecture](docs/ARCHITECTURE.md) and [decisions](docs/decisions/)
-- [Testing](docs/TESTING.md) and [security](docs/SECURITY.md)
-- [Project record](docs/PROJECT.md) and [stack](docs/STACK.md)
-- [Changelog](CHANGELOG.md) and [contributing guide](CONTRIBUTING.md)
+- `resample(points, *, every, agg, origin=..., start=..., end=..., label='left', max_points=1000000, max_buckets=1000000)`: Aggregates points into fixed buckets. `agg` accepts 'mean', 'sum', 'min', 'max', 'first', 'last', 'count'. Raises `ResampleError` for naive datetimes, invalid aggregations, invalid intervals, invalid ranges, or limits.
+- `fill(series, method, *, limit=None)`: Fills gaps in resampled series. `method` accepts 'ffill', 'bfill', 'linear', 'zero'. Raises `ResampleError` for unknown methods or invalid limits.
+- `ResampleError(code, message)`: Base exception containing a machine-readable `code`.
 
-## License
+## Why not pandas?
+This utility provides zero dependencies, strictly explicit boundary rules, and exact float summations via `math.fsum`, making it more stable and predictable for CLI tools and lightweight services.
 
-[MIT](LICENSE) (c) 2026 Miguel Gomez
+See [Security Policy](docs/SECURITY.md) for details on threat handling.
