@@ -9,4 +9,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Implement resample and fill functions with strict aware datetime validation, exact float sums, and gap filling.
 - Initial project structure from the factory utility template.

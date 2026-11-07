@@ -1,29 +1,23 @@
 # Architecture
 
-## Purpose
+`timeseries_resample` provides deterministic, zero-dependency time series resampling and gap filling.
 
-`trysac-timeseries-resample` is a small, dependency-free Python library: Resample irregular time series into fixed UTC buckets with seven aggregations and fill gaps by forward, backward, linear time-weighted or zero fill with limits
+## Resampling Pipeline
 
-## Shape
+1. **Validation & Normalization**:
+   - Inputs are verified as timezone-aware; non-UTC inputs are cast to UTC.
+   - Interval step `every` is validated as positive.
+   - Values must be `int` (excluding bool) or finite `float`. `ResampleError` is raised for invalid types or non-finite values.
+2. **Bucketing**:
+   - Half-open buckets `[b, b + every)` are aligned relative to `origin` via integer floor division: `b = origin + ((t - origin) // every) * every`.
+   - If `start` or `end` are missing, defaults are the first and last non-empty buckets.
+   - Bounds are checked against `max_buckets` before allocation.
+3. **Aggregation**:
+   - Points are grouped into buckets; `None` values are filtered out.
+   - Aggregation per bucket: `mean` and `sum` use `math.fsum` for exact precision; `min` and `max` retain original values; `first` and `last` respect sorted input order; `count` returns integer counts.
 
-```text
-caller code --> timeseries_resample (public API in __init__.py)
-                    |
-                    +-- pure functions, no I/O, no global state
-```
+## Gap Filling
 
-- **Public API**: the names listed in `__all__` of `src/timeseries_resample/__init__.py`. Anything else is
-  internal and may change without a major version.
-- **Errors**: invalid input raises built-in exceptions (`ValueError`, `TypeError`) with a clear
-  message; the library never prints or exits.
-- **Side effects**: none. If a feature needs I/O, isolate it in its own module behind a small
-  interface and record the choice in an ADR.
-
-## Quality contract
-
-`scripts/check.py` is the single definition of the gates; `fabrica.json` tells the factory and CI
-how to run it. See [TESTING.md](TESTING.md).
-
-## Decisions
-
-Architecture decisions are recorded in [decisions/](decisions/) as numbered ADRs.
+- `ffill`/`bfill`: Propagates nearest non-None values.
+- `linear`: Performs time-weighted linear interpolation `v0 + (v1 - v0) * elapsed_s / span_s`. Gaps exceeding `limit` remain `None`.
+- `zero`: Replaces `None` with `0.0`.
