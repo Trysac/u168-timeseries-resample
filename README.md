@@ -7,8 +7,10 @@ Sensor readings, metrics, and price data often arrive at irregular intervals. To
 
 ## Installation
 
+Not published to PyPI yet. Install it from GitHub:
+
 ```bash
-pip install timeseries-resample
+pip install "git+https://github.com/Trysac/u168-timeseries-resample"
 ```
 
 ## Usage
